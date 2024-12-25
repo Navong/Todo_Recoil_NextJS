@@ -1,41 +1,53 @@
-// src/components/todo/FilterButtons.tsx
 'use client';
 
-import { useTodo } from '@/hooks/useTodo';
+import { useRecoilState } from 'recoil';
+import { todoFilterState } from '@/recoil/atoms';
 import { Button } from '@/components/ui/button';
-import { TodoFilter } from '@/types/todo';
+import { useQuery } from '@tanstack/react-query';
+import { Todo, TodoFilter } from '@/types/todo';
 
 export const FilterButtons = () => {
-  const { todos, filter, setFilter } = useTodo();
-  const activeCount = todos.filter(todo => !todo.completed).length;
-  const completedCount = todos.filter(todo => todo.completed).length;
+  const [filter, setFilter] = useRecoilState(todoFilterState);
+  
+  // Fetch todos using React Query
+  const { data: todos = [] } = useQuery({
+    queryKey: ['todos'],
+    queryFn: async () => {
+      const response = await fetch('/api/todos');
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    },
+  });
 
-  const handleFilterChange = (newFilter: TodoFilter) => {
-    setFilter(newFilter);
+  // Calculate stats from the fetched todos
+  const stats = {
+    totalCount: todos.length,
+    activeCount: todos.filter((todo: Todo) => !todo.completed).length,
+    completedCount: todos.filter((todo: Todo) => todo.completed).length,
   };
 
   return (
     <div className="flex gap-2 mb-4">
       <Button
         variant={filter === 'all' ? 'default' : 'outline'}
-        onClick={() => handleFilterChange('all')}
+        onClick={() => setFilter('all')}
         size="sm"
       >
-        All ({todos.length})
+        All ({stats.totalCount})
       </Button>
       <Button
         variant={filter === 'active' ? 'default' : 'outline'}
-        onClick={() => handleFilterChange('active')}
+        onClick={() => setFilter('active')}
         size="sm"
       >
-        Active ({activeCount})
+        Active ({stats.activeCount})
       </Button>
       <Button
         variant={filter === 'completed' ? 'default' : 'outline'}
-        onClick={() => handleFilterChange('completed')}
+        onClick={() => setFilter('completed')}
         size="sm"
       >
-        Completed ({completedCount})
+        Completed ({stats.completedCount})
       </Button>
     </div>
   );
